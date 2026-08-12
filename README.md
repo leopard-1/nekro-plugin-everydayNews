@@ -10,7 +10,7 @@ Nekro-plugin-everydayNews是可以通过GET请求来获取新闻内容的插件
 - 以图片形式发送新闻（待实现）
 
 ### 配置项：
-- EverydayNews API 地址：默认且建议选为https://news.ravelloh.top，可另选为https://ravelloh.github.io/EverydayNews(国内访问可能不佳)
+- EverydayNews API 地址：默认且建议选为https://news.ravelloh.top  ，可另选为https://ravelloh.github.io/EverydayNews (国内访问可能不佳)
 - 关键词搜索天数：关键词搜索时，从最新日期向前扫描的天数 默认30d
 - 关键词搜索结果数：关键词搜索最多返回多少条新闻
 - 请求超时秒数：访问 EverydayNews API 的超时时间，如果频繁超时请检查连通性或加长超时时间

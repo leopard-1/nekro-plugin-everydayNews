@@ -23,6 +23,7 @@ Nekro-plugin-everydayNews是可以通过GET请求来获取新闻内容的插件
 
 ### 指令
 /daily_news_sync_schedule 会显示“下次推送触发时间”
+
 /daily_news_push_now 可立刻推送一次新闻（测试定时推送用）
 
 ----------------------------------------------------------------

@@ -1,0 +1,2 @@
+# nekro-plugin-everydayNews
+

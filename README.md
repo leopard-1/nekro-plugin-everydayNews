@@ -21,5 +21,9 @@ Nekro-plugin-everydayNews是可以通过GET请求来获取新闻内容的插件
 - 每日推送时区：用于读取系统当前日期和计算每日推送时间的 IANA 时区，例如 Asia/Shanghai
 - 每日推送目标群聊：用于指定推送的目标群聊，例如 onebot_v11-group_123456789（可到频道管理查看，group为群聊，private为私聊）
 
+### 指令
+/daily_news_sync_schedule 会显示“下次推送触发时间”
+/daily_news_push_now 可立刻推送一次新闻（测试定时推送用）
+
 ----------------------------------------------------------------
 该项目遵循 MIT许可证

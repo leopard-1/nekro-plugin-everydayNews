@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
@@ -29,7 +29,7 @@ plugin = NekroPlugin(
     name="每日新闻",
     module_name="daily_news",
     description="从 EverydayNews 获取每日 60 秒新闻，支持最新、指定日期、关键词搜索和每日定时推送。",
-    version="0.3.1",
+    version="0.3.2",
     author="Sakuralis",
     url="https://github.com/Leopard-1/nekro-plugin-everydayNews",
     sleep_brief="用户询问每日新闻、某天新闻、新闻关键词搜索，或需要每日定时推送新闻时激活。",
@@ -104,9 +104,16 @@ def _base_url() -> str:
     return config.BASE_URL.rstrip("/")
 
 
-def _timezone() -> ZoneInfo:
+def _timezone() -> tzinfo:
     timezone = config.DAILY_PUSH_TIMEZONE.strip() or "Asia/Shanghai"
-    return ZoneInfo(timezone)
+    try:
+        return ZoneInfo(timezone)
+    except Exception as e:
+        plugin.logger.warning(f"加载时区 {timezone!r} 失败，改用系统本地时区: {e}")
+        local_tz = datetime.now().astimezone().tzinfo
+        if local_tz is None:
+            raise
+        return local_tz
 
 
 def _system_today() -> str:
@@ -220,8 +227,10 @@ async def _push_latest_news_to_chat(chat_key: str, text: str) -> None:
     await ctx.ms.send_text(chat_key, text, ctx, record=False)
 
 
-async def _push_today_news_to_configured_chats() -> int:
+async def _push_today_news_to_configured_chats(fallback_chat_key: str = "") -> int:
     targets = _target_chat_keys()
+    if not targets and fallback_chat_key:
+        targets = [fallback_chat_key]
     if not targets:
         raise ValueError("请先在插件配置里填写 DAILY_PUSH_CHAT_KEYS")
 
@@ -304,7 +313,10 @@ async def _sync_daily_push_schedule() -> dict[str, str]:
 
 @plugin.mount_init_method()
 async def init() -> None:
-    await _sync_daily_push_schedule()
+    try:
+        await _sync_daily_push_schedule()
+    except Exception as e:
+        plugin.logger.exception(f"每日新闻初始化定时任务失败，插件命令仍会继续注册: {e}")
 
 
 @plugin.mount_cleanup_method()
@@ -445,16 +457,26 @@ async def daily_news_sync_schedule_cmd(context: CommandExecutionContext) -> Comm
 
 @plugin.mount_command(
     name="daily_news_push_now",
-    description="立即向配置的目标群聊推送一次系统日期的每日新闻。",
+    description="立即推送一次系统日期的每日新闻。高级用户可推送到配置目标，普通用户仅推送到当前聊天。",
     aliases=[],
     usage="/daily_news_push_now",
-    permission=CommandPermission.SUPER_USER,
+    permission=CommandPermission.PUBLIC,
     category="每日新闻",
     tags=["news", "daily", "push"],
 )
 async def daily_news_push_now_cmd(context: CommandExecutionContext) -> CommandResponse:
     try:
-        sent_count = await _push_today_news_to_configured_chats()
+        plugin.logger.info(
+            "收到每日新闻手动推送命令: "
+            f"chat_key={context.chat_key}, user_id={context.user_id}, "
+            f"is_super_user={context.is_super_user}, is_advanced_user={context.is_advanced_user}",
+        )
+        if context.is_super_user or context.is_advanced_user:
+            sent_count = await _push_today_news_to_configured_chats(fallback_chat_key=context.chat_key)
+        else:
+            news = await _fetch_system_today_news()
+            await _push_latest_news_to_chat(context.chat_key, _format_news(news))
+            sent_count = 1
         return CmdCtl.success(f"已执行每日新闻手动推送，共发送 {sent_count} 个目标。")
     except Exception as e:
         plugin.logger.exception(f"每日新闻手动推送失败: {e}")
